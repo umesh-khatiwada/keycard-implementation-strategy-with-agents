@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keycard Field Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE work: a technical field guide for an engineer learning a security product
+   IDEA a metro map: every feature is a line, every node a station, the token is the train
+   PICTURE a live sequence diagram of the full agent-to-agent token relay with the token's claims changing per stop
+   COLOUR white ground, black ink, line colours red / blue / amber / green; night #0e1116
+   TYPE Figtree 800 display + Figtree text, JetBrains Mono for code and tokens
+   LAYOUT title across the top, relay diagram two-thirds + token card one-third; phone stacks title, diagram, token */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#0e1116);--ink:light-dark(#14161a,#eef1f5);--mute:light-dark(#5b6270,#9aa3b2);--rule:light-dark(#e3e6ea,#262c36);--panel:light-dark(#f5f7f9,#161b23);--red:#e6261f;--blue:light-dark(#0a5cff,#4d8bff);--amber:#ffb400;--green:light-dark(#00a05a,#1fc47a);--line:var(--blue)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html{scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Figtree,system-ui,sans-serif;overflow-x:clip}
+.band{padding-block:clamp(28px,4vw,56px);padding-inline:max(5vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+h1{font-size:clamp(34px,5vw,52px);line-height:1.05;letter-spacing:-.02em;font-weight:800;margin:0 0 10px;text-wrap:balance}
+h2{font-size:clamp(26px,3.2vw,34px);line-height:1.1;letter-spacing:-.02em;font-weight:800;margin:0 0 8px;text-wrap:balance}
+h3{font-size:18px;margin:18px 0 6px}
+p{margin:0 0 12px;max-width:70ch}
+a{color:var(--blue)}
+.lede{font-size:18px;color:var(--mute);max-width:62ch}
+code,pre,.tok{font-family:"JetBrains Mono",ui-monospace,monospace}
+code{font-size:14px;overflow-wrap:anywhere;background:var(--panel);padding:1px 5px;border-radius:4px}
+pre{overflow-x:auto;background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:14px 16px;font-size:13.5px;line-height:1.5;margin:0}
+pre code{background:none;padding:0;overflow-wrap:normal}
+.codebox{position:relative;margin:10px 0 14px}
+.copy{position:absolute;top:8px;right:8px;font:600 13px Figtree,sans-serif;border:1px solid var(--rule);background:var(--bg);color:var(--ink);border-radius:8px;padding:6px 10px;min-height:32px;cursor:pointer}
+.copy:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+nav.scroll{display:flex;gap:8px;overflow-x:auto;padding:10px max(5vw,16px);border-block:1px solid var(--rule);background:var(--bg);z-index:5}
+nav.scroll a{flex:none;text-decoration:none;color:var(--ink);font-weight:600;font-size:14px;padding:8px 12px;border-radius:999px;border:2px solid var(--c,var(--rule));white-space:nowrap}
+@media(min-width:900px){nav.scroll{position:sticky;top:0}}
+.hero{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:20px;margin-top:22px;align-items:start}
+.seqwrap{overflow-x:auto;border:1px solid var(--rule);border-radius:14px;background:var(--bg)}
+.seq{position:relative;min-width:640px}
+.seq svg{position:absolute;inset:0;width:100%;height:100%}
+.seq text{font-family:Figtree,sans-serif;font-size:13px;fill:var(--ink);paint-order:stroke;stroke:var(--bg);stroke-width:4px;stroke-linejoin:round}
+.seq .hit{cursor:pointer}
+.token{border:2px solid var(--ink);border-radius:14px;padding:16px;background:var(--panel)}
+.token h3{margin:0 0 4px}
+.tok{font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere;margin:10px 0 0;line-height:1.55}
+.tok b{color:var(--red);font-weight:600}
+.ctrl{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+button.b{font:700 15px Figtree,sans-serif;min-height:44px;padding:0 16px;border-radius:10px;border:2px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
+button.b.o{background:transparent;color:var(--ink)}
+button.b:disabled{opacity:.35;cursor:default}
+.stepnote{font-size:15px;margin-top:10px;min-height:3.1em}
+.feat{border-top:6px solid var(--line)}
+.feat .grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:28px;margin-top:16px}
+ol.steps{margin:12px 0 0;padding-left:0;list-style:none;counter-reset:s}
+ol.steps li{counter-increment:s;overflow-wrap:anywhere;display:grid;grid-template-columns:30px minmax(0,1fr);gap:8px;padding:6px 8px;border-radius:8px;font-size:15px;cursor:pointer}
+ol.steps li::before{content:counter(s);width:24px;height:24px;border-radius:50%;background:var(--line);color:#fff;font-weight:800;font-size:13px;display:grid;place-items:center;margin-top:1px}
+ol.steps li.on{background:color-mix(in srgb,var(--line) 14%,transparent)}
+.pill{display:inline-block;font-size:13px;font-weight:700;padding:2px 9px;border-radius:999px;background:color-mix(in srgb,var(--line) 16%,transparent);margin:0 6px 6px 0}
+.warn{border-left:4px solid var(--red);padding:8px 12px;background:var(--panel);border-radius:0 8px 8px 0;font-size:15px;margin:10px 0}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-weight:700}
+.scroll{overflow-x:auto}
+.game{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:24px;margin-top:16px}
+.ticket{border:2px solid var(--ink);border-radius:18px;padding:22px;position:relative;background:var(--bg)}
+.ticket .q{font-size:19px;font-weight:600;margin:6px 0 14px}
+.opts{display:grid;gap:10px}
+.opts button{text-align:left;font:600 16px Figtree,sans-serif;min-height:48px;padding:10px 14px;border-radius:10px;border:2px solid var(--rule);background:var(--panel);color:var(--ink);cursor:pointer}
+.opts button.ok{border-color:var(--green);background:color-mix(in srgb,var(--green) 18%,var(--bg))}
+.opts button.no{border-color:var(--red);background:color-mix(in srgb,var(--red) 14%,var(--bg))}
+.expl{margin-top:14px;font-size:15px}
+.track{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px}
+.track i{width:22px;height:22px;border-radius:50%;border:3px solid var(--ink);background:var(--bg)}
+.track i.ok{background:var(--green);border-color:var(--green)}.track i.no{background:var(--red);border-color:var(--red)}.track i.cur{border-color:var(--amber)}
+.score{font-size:clamp(40px,6vw,64px);font-weight:800;line-height:1}
+.gloss{display:grid;grid-template-columns:repeat(auto-fit,minmax(15em,1fr));gap:12px;margin-top:14px}
+.gloss div{border:1px solid var(--rule);border-radius:10px;padding:12px 14px;font-size:15px}
+.gloss b{display:block;font-size:16px}
+footer{border-top:1px solid var(--rule);font-size:14px;color:var(--mute)}
+.small{font-size:14px;color:var(--mute)}
+@media(max-width:860px){.hero,.feat .grid,.game{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){table{font-size:13px}th,td{padding:6px 4px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--rule)}.stack td{display:flex;justify-content:space-between;gap:12px;border:0}.stack td::before{content:attr(data-l);font-weight:700}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<header class="band" style="padding-bottom:16px">
+<div class="wrap">
+<h1>Keycard field guide: how a token travels through your agents</h1>
+<p class="lede">Keycard gives every agent its own identity, checks a Cedar policy at every hop, and hands out short-lived, audience-bound tokens instead of stored API keys. Step through the full agent-to-agent relay below, then each feature has its own data-flow map, example code and pitfalls. A quiz and a ready-to-use implementation prompt close the page.</p>
+
+<div class="hero">
+  <div>
+    <div class="seqwrap"><div class="seq" id="hero-seq"><svg aria-label="Agent-to-agent token relay sequence diagram"></svg></div></div>
+    <div class="ctrl">
+      <button class="b o" id="h-prev" type="button">Previous</button>
+      <button class="b" id="h-next" type="button">Next hop</button>
+      <button class="b o" id="h-play" type="button">Play</button>
+      <span class="small" id="h-count"></span>
+    </div>
+    <p class="stepnote" id="h-note"></p>
+  </div>
+  <aside class="token" aria-live="polite">
+    <h3 id="t-title">Token in flight</h3>
+    <div class="small" id="t-sub"></div>
+    <pre class="tok" id="t-body"></pre>
+    <p class="small" style="margin-top:10px">Sample values. Changed claims are shown in red.</p>
+  </aside>
+</div>
+</div>
+</header>
+
+<nav class="scroll" aria-label="Sections">
+<a href="#concepts" style="--c:var(--blue)">Core model</a>
+<a href="#identity" style="--c:var(--green)">Agent identity</a>
+<a href="#mcp" style="--c:var(--red)">Protect MCP</a>
+<a href="#delegated" style="--c:var(--amber)">Delegated access</a>
+<a href="#a2a" style="--c:var(--blue)">Agent-to-agent</a>
+<a href="#autonomous" style="--c:var(--green)">Autonomous</a>
+<a href="#impersonation" style="--c:var(--red)">Impersonation</a>
+<a href="#frameworks" style="--c:var(--amber)">Frameworks</a>
+<a href="#policies" style="--c:var(--blue)">Cedar policies</a>
+<a href="#gateway" style="--c:var(--green)">Gateway</a>
+<a href="#sandbox" style="--c:var(--red)">Sandbox proxy</a>
+<a href="#cli" style="--c:var(--amber)">CLI &amp; coding agents</a>
+<a href="#audit" style="--c:var(--blue)">Audit &amp; revoke</a>
+<a href="#game" style="--c:var(--ink)">Gatekeeper quiz</a>
+<a href="#prompt" style="--c:var(--ink)">Implementation prompt</a>
+</nav>
+
+<main id="feats"></main>
+
+<section class="band" id="game" style="background:var(--panel)">
+<div class="wrap">
+<h2>Gatekeeper: would Keycard let this through?</h2>
+<p>Twelve requests from the incident demo. Pick what happens, then read why. Every answer follows a rule from the Keycard docs.</p>
+<div class="game">
+  <div class="ticket">
+    <div class="track" id="g-track"></div>
+    <div class="small" id="g-num"></div>
+    <div class="q" id="g-q"></div>
+    <div class="opts" id="g-opts"></div>
+    <div class="expl" id="g-expl"></div>
+    <div class="ctrl"><button class="b" id="g-next" type="button" disabled>Next request</button><button class="b o" id="g-reset" type="button">Restart</button></div>
+  </div>
+  <div>
+    <div class="small">Score</div>
+    <div class="score" id="g-score">0 / 0</div>
+    <p style="margin-top:14px">Rules you are being tested on:</p>
+    <ol style="padding-left:20px;font-size:15px;margin:0">
+      <li>Tokens are bound to one audience; a resource rejects anyone else's.</li>
+      <li>Default deny, any <code>forbid</code> beats every <code>permit</code>.</li>
+      <li><code>access_denied</code> means a rule said no; <code>insufficient_authorization</code> means the user must authorize first.</li>
+      <li>Revocation stops the next issuance, not tokens already held.</li>
+      <li>Pick the grant by who is present: PKCE, token exchange, client credentials, impersonation.</li>
+    </ol>
+  </div>
+</div>
+</div>
+</section>
+
+<section class="band" id="prompt">
+<div class="wrap">
+<h2>The implementation prompt</h2>
+<p>Paste this into Claude Code (or any coding agent) at the root of your multi-agent project. Fill in the five lines under "My system" first. It walks the agent through every feature above in a safe order and ends with tests that prove each guarantee.</p>
+<div class="codebox"><button class="copy" type="button" data-copy="prompt-text">Copy</button><pre><code id="prompt-text">You are implementing Keycard (https://docs.keycard.ai) end to end in this repository so that every agent, MCP server and tool call uses runtime-issued, policy-checked, short-lived credentials. No static API keys may remain in code, env files or agent prompts when you finish.
+
+My system (fill in):
+- Agents and their roles: e.g. orchestrator (user-facing), triage worker, nightly report job
+- How agents talk: A2A JSON-RPC / MCP / direct HTTP
+- External resources: e.g. GitHub API, Slack API, Postgres, internal REST services
+- Where it runs: e.g. Kubernetes on AWS (EKS), Vercel, local dev
+- Identity provider for people: e.g. Okta / Entra ID / Google, and the groups that matter
+
+Read first: docs.keycard.ai/llms.txt, then concepts, sdk/agent-to-agent, sdk/mcp, sdk/oauth, concepts/credentials, concepts/policies, reference/policy-schema, reference/token-claims. Use the official SDKs (Python: keycardai-a2a, keycardai-mcp or keycardai-fastmcp, keycardai-oauth, keycardai-starlette, keycardai-langchain / -pydantic-ai / -temporal; TypeScript: @keycardai/a2a, @keycardai/mcp, @keycardai/langchain). Check installed versions and real signatures before writing code; the A2A packages are pre-1.0.
+
+Work in phases. After each phase, stop, show me the diff and a short test result.
+
+Phase 0 - Inventory. List every place a credential is created, stored, read or passed (env vars, config, prompts, headers). Produce a table: caller -> callee, on whose behalf (user / agent itself / absent user), and the Keycard pattern that fits (PKCE sign-in, RFC 8693 token exchange, client credentials, impersonation, gateway, egress proxy). Write the Keycard Console setup checklist I must do by hand: zone, IdP, groups (SCIM if available), one Application per agent, one Resource per agent/MCP server/API with its exact identifier URL, credential providers for third-party APIs, application dependencies.
+
+Phase 1 - Identity. Give each agent/server its own Keycard Application. Locally use ClientSecret from env; in production use workload identity for the platform above (EKSWorkloadIdentity / Kubernetes projected token / WebIdentity / cloud OIDC) so no secret exists. Rely on discover_credential env vars (KEYCARD_CLIENT_ID, KEYCARD_CLIENT_SECRET, KEYCARD_APPLICATION_CREDENTIAL_TYPE ...) and fail fast on ambiguity.
+
+Phase 2 - Protect every inbound surface. MCP servers: AuthProvider wrapping the server, with audience set to the server's Resource identifier. A2A agents: agent card at /.well-known/agent-card.json, RFC 9728 protected-resource metadata, KeycardAuthBackend(require_authentication=True) on /a2a/jsonrpc, audience = the agent's identity URL, KeycardServerCallContextBuilder so executors read keycard_user(context). Unauthenticated calls must get 401 with WWW-Authenticate resource_metadata.
+
+Phase 3 - Delegation. Outbound agent-to-agent calls go through DelegationClient (discover -> token exchange with subject_token = the caller's verified token -> SendMessage with A2A-Version 1.0). Calls to third-party APIs use @grant / AccessContext (always check has_errors()) or keycardai-oauth TokenExchangeRequest with resource = the API. Never forward an inbound token to another service. Handle access_denied (policy) and insufficient_authorization (user must authorize) distinctly, and surface a sign-in link for the latter.
+
+Phase 4 - No-user paths. Background jobs use client credentials (as themselves). Only where a job truly must act as a specific absent user, use impersonation: confidential client, consent implicit, an explicit Cedar permit on context.impersonate == true, and the user must have delegated before. Never take the user identifier from unverified request data.
+
+Phase 5 - Framework hooks. If agents use LangChain/LangGraph, Pydantic AI or Temporal, mint tokens per tool call / per execution with the Keycard integration (e.g. KeycardGrantMiddleware with Access.on_behalf_of / as_self) so the model never sees a credential.
+
+Phase 6 - Policy as code. Write Cedar policies in policies/*.cedar: default deny (replace the managed default-user-grants), group-based access per agent, app-to-app delegation only when context.on_behalf, per-tool rules for MCP via Keycard::Action::"mcp::tools/call::TOOL" if a gateway is used, and forbid rules for dangerous tools. Add a test matrix (principal, action, resource, context -> expected decision) and tell me how to run it in Console > Policies > Testing; if the Keycard Terraform provider fits our stack, manage policy sets with it.
+
+Phase 7 - Containment and coding agents. For untrusted or sandboxed agents, design the egress-proxy sidecar allow list (exact hosts, ports, path prefixes matching Resources). For developers' coding agents, add keycard.toml mapping env vars to resources and document keycard run.
+
+Phase 8 - Audit and revocation. Log Keycard sid and jti with every outbound call. Document how to trace one user request across all hops in Console > Audit Log &amp; Sessions, how to export to S3 (OCSF) / our SIEM, and the revocation runbook (revoke grant, disable user, revoke at third-party provider, rotate vaulted secrets; held tokens live until exp).
+
+Acceptance tests (automate what you can, list the rest as manual steps):
+1. Every protected endpoint returns 401 without a token.
+2. A token minted for agent A is rejected by agent B (audience).
+3. User -> orchestrator -> worker -> API works and the audit log shows one sid across hops.
+4. Removing the user from the required group gives access_denied on the next call without re-login.
+5. Revoking the user's grant gives insufficient_authorization on the next exchange.
+6. A forbidden tool is blocked before it reaches the MCP server.
+7. grep finds no static API keys or long-lived tokens in the repo or images.
+
+Deliverables: code changes, policies/, keycard.toml, .env.example without secrets, a README section with the data-flow diagram of every hop (who calls whom, which token, which audience, which policy), and the Console checklist.</code></pre></div>
+<p class="small">Also saved as <code>PROMPT.md</code> in the code kit.</p>
+</div>
+</section>
+
+<footer class="band">
+<div class="wrap">
+<p><b>Sources.</b> Keycard documentation: <a href="https://docs.keycard.ai/concepts.md">How Keycard works</a>, <a href="https://docs.keycard.ai/concepts/credentials.md">Credential issuance</a>, <a href="https://docs.keycard.ai/concepts/policies.md">Policies</a>, <a href="https://docs.keycard.ai/reference/policy-schema.md">Policy schema</a>, <a href="https://docs.keycard.ai/reference/token-claims.md">Token claims</a>, <a href="https://docs.keycard.ai/sdk/agent-to-agent.md">Agent-to-agent SDK</a>, <a href="https://docs.keycard.ai/sdk/mcp.md">MCP SDK</a>, <a href="https://docs.keycard.ai/admin/unified-access-gateway/fine-grained-authorization.md">Gateway fine-grained authorization</a>, <a href="https://docs.keycard.ai/reference/egress-proxy.md">Egress proxy</a>, <a href="https://docs.keycard.ai/cli.md">CLI</a>, <a href="https://docs.keycard.ai/use-cases/revoke-once.md">Revoke once</a>, <a href="https://docs.keycard.ai/admin/audit-log-export.md">Audit log export</a>. SDK source: <a href="https://github.com/keycardai/python-sdk">keycardai/python-sdk</a>, <a href="https://github.com/keycardai/typescript-sdk">keycardai/typescript-sdk</a>. Code here was checked against keycardai-a2a 0.5.1, keycardai-mcp 2.3.10, keycardai-oauth 0.37.1, keycardai-langchain 0.7.5. Token values and names in diagrams are sample data.</p>
+</div>
+</footer>
+
+<script>
+{
+const C={blue:'var(--blue)',red:'var(--red)',amber:'var(--amber)',green:'var(--green)'};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- Features: lanes, steps [from,to,arrow label,detail], prose, code ---------- */
+const F=[
+{id:'concepts',c:'blue',t:'Core model: challenge, request, evaluate, credential, access',
+lanes:['Agent','Resource','Keycard STS','IdP + policy'],
+steps:[[0,1,'call, no credential','The agent calls an API, MCP server, database or another agent without a valid token.'],
+[1,0,'401 challenge','The resource answers with an authorization challenge pointing at its zone (WWW-Authenticate + resource metadata).'],
+[0,2,'OAuth 2.1 request','The agent asks its zone\'s Security Token Service for a credential for that exact resource.'],
+[2,3,'authenticate','STS authenticates the person (login, consent) and the agent (its own identity).'],
+[3,2,'Cedar decision','After each step, policy sees user, groups, agent identity, delegated authority and workload claims. It permits or denies.'],
+[2,0,'scoped token','Only if permitted: a short-lived token whose audience is that one resource. Denied requests get nothing, but the decision is logged.'],
+[0,1,'Bearer token','The agent retries with the token; the resource verifies signature, issuer and audience.'],
+[1,0,'result','Access granted. The agent continues its reasoning loop.']],
+html:`<p>Everything in Keycard lives in a <b>zone</b>: the trust boundary that holds users, applications and resources and runs its own STS. Your organization is itself a zone.</p>
+<div class="gloss">
+<div><b>Users</b>People who reach resources directly or delegate to agents. Sign in through your IdP (Okta, Entra, Google, Auth0, Ping, OIDC).</div>
+<div><b>Applications</b>Agents, MCP servers, services. Each proves its own identity: client secret, key pair, or workload identity.</div>
+<div><b>Resources</b>APIs, MCP servers, databases, other agents. Identified by URL; they only accept tokens whose <code>aud</code> is their identifier.</div>
+<div><b>Providers</b>Trust with the outside: user IdPs, workload identity providers (cloud platforms), and credential providers that broker GitHub, Google, Slack tokens.</div>
+<div><b>Policies</b>Cedar rules evaluated at every step. Default deny; <code>forbid</code> wins.</div>
+<div><b>Credentials</b>Issued or brokered only after policy allows: Keycard-issued JWT, brokered provider token, or vaulted static secret.</div>
+</div>`,
+code:null},
+
+{id:'identity',c:'green',t:'Agent identity without stored secrets',
+lanes:['Platform','Agent','Keycard STS','Resource'],
+steps:[[0,1,'workload OIDC token','At start-up the runtime hands the agent a signed identity token: a Kubernetes projected service-account token, AWS/EKS pod identity, GCP, Azure, Vercel or Fly.io OIDC, a SPIFFE JWT-SVID, or an Entra Agent ID token.'],
+[1,2,'present as assertion','The agent authenticates to STS with that token instead of a client secret.'],
+[2,2,'verify issuer','STS checks it against the workload identity provider you registered and maps it to the Keycard Application.'],
+[2,1,'app token (sub_profile=app)','The agent now holds a Keycard identity. A compromised host yields no reusable long-lived key.'],
+[1,3,'call as itself','It can call resources as itself, or exchange user tokens it receives.']],
+html:`<p>Every agent is its own Keycard <b>Application</b>. Pick how it proves who it is:</p>
+<div class="scroll"><table class="stack"><thead><tr><th>Credential</th><th>Use when</th><th>SDK class / env</th></tr></thead><tbody>
+<tr><td>Client secret</td><td>Local development</td><td><code>ClientSecret</code>, <code>KEYCARD_CLIENT_ID</code> + <code>KEYCARD_CLIENT_SECRET</code></td></tr>
+<tr><td>Private-key JWT</td><td>Servers that can keep a key pair</td><td><code>WebIdentity</code>, <code>KEYCARD_WEB_IDENTITY_KEY_STORAGE_DIR</code></td></tr>
+<tr><td>Workload identity</td><td>Production on EKS, K8s, cloud, Vercel, Fly</td><td><code>EKSWorkloadIdentity</code>, <code>KEYCARD_APPLICATION_CREDENTIAL_TYPE=workload_identity</code></td></tr>
+</tbody></table></div>
+<div class="warn">If client-secret variables and an injected token file are both present with no selector, start-up fails with an ambiguity error instead of guessing.</div>`,
+code:`from keycardai.mcp.server.auth import AuthProvider, EKSWorkloadIdentity
+
+auth_provider = AuthProvider(
+    zone_id="your-zone-id",
+    mcp_server_name="Incident GitHub MCP",
+    audience="http://localhost:8000/mcp",
+    # reads AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE injected by EKS Pod Identity
+    application_credential=EKSWorkloadIdentity(),
+)`},
+
+{id:'mcp',c:'red',t:'Protect an MCP server',
+lanes:['MCP client','MCP server','Keycard STS','IdP'],
+steps:[[0,1,'POST /mcp','Claude Code, Cursor or any MCP client connects with no token.'],
+[1,0,'401 + resource_metadata','AuthProvider answers with WWW-Authenticate pointing at /.well-known/oauth-protected-resource.'],
+[0,1,'GET metadata','The client reads authorization_servers: your zone URL (RFC 9728).'],
+[0,2,'authorize (PKCE)','The client starts OAuth 2.1 authorization code + PKCE against the zone.'],
+[2,3,'user signs in','The person signs in with their work account; policy checks they may reach this server.'],
+[2,0,'token aud=server','STS issues a token bound to the MCP server\'s resource identifier.'],
+[0,1,'tool call + Bearer','Every request carries the token. The verifier checks JWKS signature, iss and aud.'],
+[1,0,'tool result','Authenticated. The tool knows exactly which user is calling.']],
+html:`<p>Wrap any MCP server with <code>AuthProvider</code>. It serves the OAuth discovery endpoints, issues the 401 challenge and verifies every bearer token, so any spec-compliant MCP client can sign in.</p>
+<p><span class="pill">Python: keycardai-mcp / keycardai-fastmcp</span><span class="pill">TS: @keycardai/mcp</span><span class="pill">Cloudflare Workers</span></p>
+<div class="warn">Always set <code>audience</code>. Without it the verifier accepts a token minted for any resource in the zone, and the SDK warns at start-up.</div>`,
+code:`import uvicorn
+from keycardai.mcp.server.auth import AuthProvider
+from mcp.server.mcpserver import MCPServer
+
+auth_provider = AuthProvider(
+    zone_id="your-zone-id",
+    mcp_server_name="Incident GitHub MCP",
+    mcp_server_url="http://localhost:8000/",
+    audience="http://localhost:8000/mcp",
+)
+mcp = MCPServer("Incident GitHub MCP")
+
+@mcp.tool()
+def ping() -> str:
+    return "pong - you are authenticated"
+
+uvicorn.run(auth_provider.app(mcp), port=8000)   # kit: 01_mcp_server/github_mcp.py`},
+
+{id:'delegated',c:'amber',t:'Delegated access: call GitHub as the signed-in user',
+lanes:['MCP client','MCP server','Keycard STS','GitHub API'],
+steps:[[0,1,'tool call (user token)','Alice asks for recent commits; her token (aud = MCP server) arrives with the call.'],
+[1,1,'@grant intercepts','Before the tool body runs, the decorator starts a token exchange.'],
+[1,2,'RFC 8693 exchange','subject_token = Alice\'s token, resource = https://api.github.com, authenticated with the server\'s own credential.'],
+[2,2,'policy: app AND user','Both the MCP server application and Alice must be permitted. Every hop shares Alice\'s session.'],
+[2,1,'GitHub credential','The brokered GitHub token for Alice, or insufficient_authorization if she never connected GitHub.'],
+[1,3,'GET /repos/…','The tool reads access_ctx.access(GITHUB).access_token and calls GitHub as Alice.'],
+[3,0,'commits','Result returns. No GitHub token was ever stored on the server.']],
+html:`<p>The <code>@grant</code> decorator declares which external APIs a tool needs. The <code>AccessContext</code> it injects is non-throwing by design: check <code>has_errors()</code> before using a token.</p>
+<p>Catalog connectors include GitHub, Slack, Linear, Sentry, PagerDuty, Neon and Google Workspace; anything else can be added as a custom resource.</p>`,
+code:`@mcp.tool()
+@auth_provider.grant("https://api.github.com")
+async def recent_commits(access_ctx: AccessContext, ctx: Context, repo: str) -> dict:
+    if access_ctx.has_errors():
+        return {"error": access_ctx.get_errors()}
+    token = access_ctx.access("https://api.github.com").access_token
+    async with httpx.AsyncClient() as http:
+        r = await http.get(f"https://api.github.com/repos/{repo}/commits",
+                           headers={"Authorization": f"Bearer {token}"})
+    return r.json()`},
+
+{id:'a2a',c:'blue',t:'Agent-to-agent delegation (A2A)',
+lanes:['Alice','Orchestrator','Keycard STS','Triage agent'],
+steps:[[0,1,'SendMessage + #1','Alice\'s token #1 has aud = orchestrator. KeycardAuthBackend verifies it; the executor reads keycard_user(context).'],
+[1,3,'GET agent-card.json','DelegationClient discovers the remote agent at /.well-known/agent-card.json (cached).'],
+[1,2,'exchange subject=#1','RFC 8693: subject_token = token #1, resource and audience = the triage agent URL. The orchestrator authenticates as itself.'],
+[2,2,'policy at this hop','Orchestrator app permitted to reach triage (only on_behalf), Alice permitted too. Privilege can only narrow.'],
+[2,1,'token #2 aud=triage','Same subject (Alice) and session id; audience is now only the triage agent.'],
+[1,3,'SendMessage + #2','JSON-RPC to /a2a/jsonrpc with A2A-Version: 1.0. The triage agent rejects any token not minted for it.'],
+[3,1,'result','Triage may exchange #2 again for GitHub. The answer flows back to Alice.']],
+html:`<p>Keycard supports three delegation patterns on the same SDK and policy engine: an agent acting for itself across hops, an agent acting for a human or another agent through explicit delegation, and impersonation under policy. A2A agents discover each other via agent cards and Client ID Metadata Documents.</p>
+<p><span class="pill">Python: keycardai-a2a</span><span class="pill">TS: @keycardai/a2a</span><span class="pill">Go, Ruby, Java: delegation client</span></p>
+<p>If the caller also sends an <code>actor_token</code>, the issued credential carries the actor chain in an <code>act</code> claim, up to five actors.</p>
+<div class="warn">Never forward the inbound token. Exchange it: the next agent only accepts its own audience, and the policy check at each hop is what keeps privilege narrowing.</div>`,
+code:`from keycardai.a2a import keycard_user
+from keycardai.a2a.server import DelegationClient
+
+delegation = DelegationClient(config)   # config = THIS agent's AgentServiceConfig
+
+class OrchestratorExecutor(AgentExecutor):
+    async def execute(self, context, event_queue):
+        caller = keycard_user(context)  # verified upstream
+        if caller is None:
+            raise PermissionError("unauthenticated")
+        result = await delegation.invoke_service(
+            "http://localhost:8002",            # triage agent
+            {"task": "Triage: " + context.get_user_input()},
+            subject_token=caller.access_token,  # exchange, then call
+        )
+        await event_queue.enqueue_event(agent_text(result["result"]))
+# kit: 02_a2a/orchestrator_agent.py
+#      common/a2a_app.py, 05_typescript/a2a-agent.ts`},
+
+{id:'autonomous',c:'green',t:'Autonomous access: an agent acting as itself',
+lanes:['Nightly job','Keycard STS','Resource'],
+steps:[[0,1,'client_credentials','No user. The job authenticates with its own credential (secret, workload identity or URL credential; public clients are not allowed).'],
+[1,1,'policy on the app','Only the application is evaluated: its identity, dependencies, roles.'],
+[1,0,'app token','sub_profile = app, sub = keycard_app_id. Or the vaulted/brokered secret the zone holds for that resource.'],
+[0,2,'call','Org-level work: summaries, monitors, queue workers. Audit shows the application, no person.']],
+html:`<p>Use it for service-to-service, machine-to-machine and agent-to-agent calls where nobody is present. In LangChain this is <code>Access.as_self()</code>: an explicit choice, never a silent fallback.</p>
+<div class="warn">Client credentials alone cannot reach a user's brokered access (Alice's GitHub). That needs impersonation.</div>`,
+code:`from keycardai.oauth import BasicAuth, Client, ClientConfig, ClientCredentialsRequest
+
+with Client(base_url="https://your-zone-id.keycard.cloud",
+            auth=BasicAuth(DIGEST_ID, DIGEST_SECRET),
+            config=ClientConfig(enable_metadata_discovery=True, auto_register_client=False)) as kc:
+    tok = kc.client_credentials_grant(ClientCredentialsRequest(resource="https://api.github.com"))
+# kit: 03_background/nightly_digest.py --mode as_self`},
+
+{id:'impersonation',c:'red',t:'Impersonation: acting for an absent user',
+lanes:['Background agent','Keycard STS','Cedar policy','GitHub API'],
+steps:[[0,1,'exchange + user id','The agent authenticates as itself and sends a substitute-user token naming Alice. That token is unsigned and proves nothing alone.'],
+[1,2,'impersonate == true?','Requires a permit matching context.impersonate == true. Default policies never allow it, so you get access_denied.'],
+[2,1,'user also permitted','Alice herself must be permitted on the resource.'],
+[1,1,'prior delegation?','Alice must have authorized this resource before, otherwise insufficient_authorization.'],
+[1,0,'token sub=Alice','Keycard-issued tokens: subject Alice, act claim naming the agent. Brokered resources return the provider token. No session id.'],
+[0,3,'call as Alice','Audit records the application as actor and Alice as delegator.']],
+html:`<p>All four must hold:</p>
+<ol style="font-size:15px;padding-left:20px"><li>Confidential client (public clients are rejected).</li><li>Application consent set to <code>implicit</code>.</li><li>A permit on <code>context.impersonate == true</code> plus user permission.</li><li>Prior user delegation for the resource.</li></ol>
+<div class="warn">In MCP, <code>grant(..., user_identifier=...)</code> resolves the user per call. Take that identifier only from verified auth state, never from tool arguments a model can fill.</div>`,
+code:`// policies/03_impersonation.cedar
+@id("digest-may-impersonate-for-github")
+permit (principal is Keycard::Application, action, resource)
+when {
+  context.impersonate == true &&
+  principal.identifier == "nightly-digest" &&
+  resource.identifier == "https://api.github.com"
+};
+
+# python
+tok = kc.impersonate(user_identifier="alice@example.com", resource="https://api.github.com")`},
+
+{id:'frameworks',c:'amber',t:'Framework integrations: a fresh token per tool call',
+lanes:['LLM','LangChain agent','Keycard middleware','Keycard STS','API'],
+steps:[[0,1,'tool_call','The model decides to call list_incident_issues. It never sees a credential.'],
+[1,2,'wrap_tool_call','KeycardGrantMiddleware runs at the tool-call boundary.'],
+[2,3,'exchange per identity','Uses the run\'s identity: on_behalf_of(user token), as_self(), or impersonate(user).'],
+[3,2,'AccessContext','Token for the declared resource, or a sign_in_required interrupt if the user must connect first.'],
+[2,4,'tool reads token','get_access_context().access(GITHUB).access_token inside the tool.'],
+[4,0,'result to model','Only data returns to the model; every call is in the audit log as agent-for-user.']],
+html:`<div class="scroll"><table class="stack"><thead><tr><th>Integration</th><th>What you get</th></tr></thead><tbody>
+<tr><td>LangChain / LangGraph</td><td>Per-tool-call tokens, sign-in and consent as interrupts (Python, TS)</td></tr>
+<tr><td>Pydantic AI</td><td>Per-tool tokens, consent via deferred tool approval</td></tr>
+<tr><td>Temporal</td><td>Per-execution tokens with grant decorators and an interceptor</td></tr>
+<tr><td>FastMCP / MCP SDK</td><td>Bearer middleware, metadata endpoints, <code>@grant</code></td></tr>
+<tr><td>Cursor Agent SDK, eve, Cloudflare Workers</td><td>Token verification and exchange in TS runtimes</td></tr>
+</tbody></table></div>`,
+code:`keycard = KeycardGrantMiddleware(
+    zone_url="https://your-zone-id.keycard.cloud",
+    resources=["https://api.github.com"],
+    client_id="oncall-agent", client_secret=os.environ["AGENT_CLIENT_SECRET"],
+)
+agent = create_agent(model, tools=[list_incident_issues],
+                     middleware=[keycard], context_schema=KeycardIdentity)
+agent.invoke({"messages": [...]}, context=Access.on_behalf_of(user_token))
+# kit: 04_langchain/oncall_agent.py`},
+
+{id:'policies',c:'blue',t:'Policies as code in Cedar',
+lanes:['Request','Cedar engine','Policy set','Audit'],
+steps:[[0,1,'entities + context','principal (User/Application), action, resource, context: on_behalf, impersonate, subject, scopes, actor_claims, subject_claims.'],
+[1,2,'any forbid?','A matching forbid denies immediately and overrides every permit, managed ones included.'],
+[1,2,'any permit?','Allowed only if some permit matches. For delegated requests, user AND application must both be permitted.'],
+[2,1,'else deny','Default deny. No credential is issued.'],
+[1,3,'decision logged','Permits and denials both appear in Policies > Activity and the audit log.']],
+html:`<p>Policy sets are versioned: activate a known-good set, roll back, and test against real users, apps and resources before going live. Manage them with Terraform if you prefer code review for access changes.</p>
+<p>Group membership is resolved at evaluation time, so removing someone from a group takes effect on the next request with no re-login. The raw IdP <code>groups</code> claim, by contrast, is a snapshot from the last sign-in.</p>
+<div class="warn">A new zone's managed set includes <code>default-user-grants</code>: every authenticated user reaches every resource. Activate a set without it, or add forbids, before trusting your own permits.</div>`,
+code:`@id("oncall-can-use-orchestrator")
+permit (principal in Keycard::Group::"oncall-engineers", action, resource)
+when { resource.identifier == "http://localhost:8001" };
+
+@id("orchestrator-delegates-to-triage")
+permit (principal is Keycard::Application, action, resource)
+when {
+  principal.identifier == "incident-orchestrator" &&
+  resource.identifier == "http://localhost:8002" &&
+  context.on_behalf == true
+};
+// kit: policies/01_baseline.cedar`},
+
+{id:'gateway',c:'green',t:'Gateway: allow one tool, deny the next',
+lanes:['MCP client','Keycard gateway','Policy','Upstream MCP'],
+steps:[[0,1,'tools/list','Checked against each upstream; denied upstreams are left out of the list (all denied gives HTTP 403).'],
+[1,0,'filtered tools','The agent only sees tools it may use.'],
+[0,1,'tools/call delete_event','Action = Keycard::Action::"mcp::tools/call::delete_event" (bare upstream name).'],
+[1,2,'check user + app','Runs twice: for the user and for the application acting for them, plus "any" for the upstream exchange.'],
+[2,1,'deny','Forbid or no permit: JSON-RPC -32603 "access denied by policy" over HTTP 403. The call never reaches the server.'],
+[1,3,'allowed: forward','Otherwise the gateway exchanges the token and forwards. Policy changes apply on the next call, no restart.']],
+html:`<p>Use the Unified Access Gateway when you want enforcement outside agent code. Existing gateways work too: recipes exist for agentgateway, Kong AI Gateway, Azure API Management and Gravitee. Make your own MCP server accept only gateway tokens so agents cannot bypass per-tool policy, and choose which tools the gateway serves before releasing them.</p>`,
+code:`@id("open-issue-commanders-only")
+permit (
+  principal in Keycard::Group::"incident-commanders",
+  action == Keycard::Action::"mcp::tools/call::open_incident_issue",
+  resource
+) when { resource.identifier == "http://localhost:8000/mcp" };
+
+@id("freeze-issue-creation")      // kill switch: beats every permit
+forbid (principal,
+  action == Keycard::Action::"mcp::tools/call::open_incident_issue",
+  resource);`},
+
+{id:'sandbox',c:'red',t:'Sandboxed agents: credentials added on the wire',
+lanes:['Agent (no creds)','Egress proxy','Keycard STS','External API'],
+steps:[[0,1,'all traffic redirected','An init container installs iptables rules: outbound TCP and DNS go to the sidecar, everything else (UDP, QUIC) is dropped.'],
+[1,1,'allow list','Exact host, one port, longest path prefix; must match a zone Resource. Cleartext HTTP is never forwarded; private and metadata IPs are always denied.'],
+[1,2,'impersonation exchange','For an allowed credentialed endpoint, the proxy exchanges for the sandbox\'s user. Denied requests trigger no exchange.'],
+[2,1,'credential','Written into a header template, query parameter or basic auth, overwriting anything the agent sent. Never logged.'],
+[1,3,'forward','The agent never held a key, so prompt injection cannot leak one.'],
+[1,1,'audit line','One JSON line per decision with a reason code: endpoint_allowed, no_matching_endpoint, exchange_denied, cleartext_not_forwarded...']],
+html:`<p>For per-user agents in Kubernetes sandboxes. Denied requests carry the reason in <code>X-Keycard-Deny-Reason</code>. A workload token ties the sandbox to one ServiceAccount, so policy can pin it to one user; a shared client secret could act for any permitted user.</p>
+<div class="warn">The docs mark the egress proxy as not yet released; configuration details may change.</div>`,
+code:null},
+
+{id:'cli',c:'amber',t:'CLI and coding agents',
+lanes:['Developer','keycard CLI','Keycard STS','Claude Code','GitHub'],
+steps:[[0,1,'auth signin','keycard auth signin --zone ZONE --org ORG (or --device on a headless box).'],
+[0,1,'keycard run claude','Starts Claude Code inside an audited session: KEYCARD_RUN=1, KEYCARD_RUN_SESSION_ID set.'],
+[1,2,'just-in-time creds','For each keycard.toml entry the CLI requests a credential for that resource, narrower than the developer\'s own.'],
+[1,3,'env var injected','GH_TOKEN exists only in that process; approvals can prompt via osascript, browser or native.'],
+[3,4,'gh / git calls','Every call is attributed to the developer through the coding agent, in one session.']],
+html:`<div class="scroll"><table class="stack"><thead><tr><th>Command</th><th>Does</th></tr></thead><tbody>
+<tr><td><code>brew install keycardai/tap/keycard</code></td><td>Install</td></tr>
+<tr><td><code>keycard run --zone Z -- CMD</code></td><td>Run any command with just-in-time credentials</td></tr>
+<tr><td><code>keycard credential read URI</code></td><td>Print a credential for one resource</td></tr>
+<tr><td><code>keycard credential sync --mcp</code></td><td>Add entries for every MCP server in the zone</td></tr>
+<tr><td><code>keycard agent exec -- CMD</code></td><td>Non-interactive variant for agents and CI</td></tr>
+<tr><td><code>keycard plugin install claude</code></td><td>Claude Code plugin</td></tr>
+</tbody></table></div>`,
+code:`# keycard.toml
+[zone]
+id = "your-zone-id"
+
+[[credentials.default]]
+env_var = "GH_TOKEN"
+resource = "https://api.github.com"`},
+
+{id:'audit',c:'blue',t:'Sessions, audit and revocation',
+lanes:['Admin','Keycard','Agent','Audit / SIEM'],
+steps:[[2,1,'exchange (sid=s-7f3)','Every hop of one user request shares a session id; each token has a unique jti for correlation.'],
+[1,3,'events','Authentication, authorization, API and secret events; exported as OCSF v1.7 Parquet to your S3 within an hour (Splunk, Panther...).'],
+[0,1,'revoke Alice\'s grant','In the Console or API. The withdrawal appears on the Resource\'s Activity feed.'],
+[2,1,'next exchange','Refused with insufficient_authorization (not access_denied): ask Alice to authorize again.'],
+[1,3,'failure logged','Names the person, the application and the resource.'],
+[2,2,'held token','Still works until exp: Keycard-issued tokens default to 24h unless the Resource sets a shorter lifetime.']],
+html:`<div class="scroll"><table class="stack"><thead><tr><th>Claim</th><th>Meaning</th></tr></thead><tbody>
+<tr><td><code>iss</code></td><td>The zone that issued it</td></tr>
+<tr><td><code>sub</code> / <code>sub_profile</code></td><td>User id or application id; <code>user</code> or <code>app</code></td></tr>
+<tr><td><code>keycard_app_id</code>, <code>client_id</code></td><td>Application it was issued for, and the credential used</td></tr>
+<tr><td><code>aud</code></td><td>The one resource that may accept it</td></tr>
+<tr><td><code>scope</code></td><td>Permissions granted by policy</td></tr>
+<tr><td><code>sid</code>, <code>jti</code></td><td>Session shared across hops; unique token id</td></tr>
+<tr><td><code>exp</code>, <code>iat</code></td><td>Expiry and issue time</td></tr>
+</tbody></table></div>
+<div class="warn">Revoking in Keycard does not revoke what GitHub or Google already issued; revoke there too. A vaulted static secret never expires on its own: rotate it.</div>`,
+code:null}
+];
+
+/* ---------- sequence diagram renderer ---------- */
+function seq(host,d,getOn,onPick){
+  const s=host.querySelector('svg');
+  host.style.height=(62+d.steps.length*44+14)+'px';
+  const draw=()=>{
+    const W=s.clientWidth,H=s.clientHeight,n=d.lanes.length,M=Math.max(70,W/(n*2.2));
+    const x=i=>M+i*(W-2*M)/(n-1),on=getOn(),col=d.color;
+    const pw=Math.min(132,(W-2*M)/(n-1)-10);
+    let o=`<defs><marker id="ar-${d.key}" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker></defs>`;
+    d.lanes.forEach((l,i)=>{o+=`<line x1="${x(i)}" y1="44" x2="${x(i)}" y2="${H-6}" stroke="var(--rule)" stroke-width="3"/>`;
+      o+=`<rect x="${x(i)-pw/2}" y="10" width="${pw}" height="32" rx="16" fill="var(--bg)" stroke="${col}" stroke-width="3"/><text x="${x(i)}" y="31" text-anchor="middle" font-weight="700">${esc(l)}</text>`;});
+    d.steps.forEach((st,k)=>{
+      const [a,b,lab]=st,y=70+k*44,hi=k===on,c=hi?col:'var(--mute)',sw=hi?3.5:2;
+      o+=`<g class="hit" data-k="${k}"><rect x="0" y="${y-24}" width="${W}" height="40" fill="${hi?'color-mix(in srgb, '+col+' 10%, transparent)':'transparent'}"/>`;
+      if(a===b){o+=`<path d="M${x(a)} ${y-8}h30v16h-26" fill="none" stroke="${c}" stroke-width="${sw}" marker-end="url(#ar-${d.key})"/><text x="${x(a)+38}" y="${y+5}" ${hi?'font-weight="700"':''}>${esc(lab)}</text>`;}
+      else{const x1=x(a)+(b>a?5:-5),x2=x(b)+(b>a?-6:6);o+=`<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${c}" stroke-width="${sw}" marker-end="url(#ar-${d.key})"/><text x="${(x(a)+x(b))/2}" y="${y-8}" text-anchor="middle" ${hi?'font-weight="700"':''}>${esc(lab)}</text>`;}
+      o+=`<circle cx="${x(a)}" cy="${y}" r="10" fill="${hi?col:'var(--bg)'}" stroke="${col}" stroke-width="2"/><text x="${x(a)}" y="${y+4.5}" text-anchor="middle" font-weight="800" style="stroke-width:0;fill:${hi?'#fff':'var(--ink)'}">${k+1}</text></g>`;
+    });
+    s.innerHTML=o;
+  };
+  s.addEventListener('click',e=>{const g=e.target.closest('.hit');if(g)onPick(+g.dataset.k);});
+  const ro=new ResizeObserver(draw);ro.observe(s);
+  return draw;
+}
+
+/* ---------- build feature sections ---------- */
+const main=document.getElementById('feats');
+main.innerHTML=F.map((f,i)=>`<section class="band feat" id="${f.id}" style="--line:${C[f.c]}">
+<div class="wrap"><h2>${f.t}</h2>
+<div class="grid"><div><div class="seqwrap"><div class="seq" data-i="${i}"><svg aria-label="${esc(f.t)} data flow"></svg></div></div>
+<ol class="steps" data-i="${i}">${f.steps.map((s,k)=>`<li data-k="${k}"><span><b>${esc(f.lanes[s[0]])} → ${esc(f.lanes[s[1]])}:</b> ${esc(s[3])}</span></li>`).join('')}</ol></div>
+<div>${f.html}${f.code?`<div class="codebox"><button class="copy" type="button" data-copy="code-${i}">Copy</button><pre><code id="code-${i}"></code></pre></div>`:''}</div></div></div></section>`).join('');
+F.forEach((f,i)=>{
+  if(f.code)document.getElementById('code-'+i).textContent=f.code;
+  let on=0;const lis=[...main.querySelectorAll(`ol.steps[data-i="${i}"] li`)];
+  const mark=()=>lis.forEach((l,k)=>l.classList.toggle('on',k===on));
+  const pick=k=>{on=k;draw();mark();};
+  const draw=seq(main.querySelector(`.seq[data-i="${i}"]`),{key:f.id,lanes:f.lanes,steps:f.steps,color:C[f.c]},()=>on,pick);
+  lis.forEach(l=>l.addEventListener('click',()=>pick(+l.dataset.k)));mark();
+});
+
+/* ---------- hero relay ---------- */
+const base={iss:'https://z-7c1.keycard.cloud',sub:'alice-4f2k',sub_profile:'user',keycard_app_id:'oncall-cli',client_id:'cli-public',aud:'http://localhost:8001',scope:'agent:invoke',sid:'s-7f3e',exp:1764061200,iat:1764057600,jti:'tok-1a'};
+const t2={...base,keycard_app_id:'incident-orchestrator',client_id:'orch-9xk',aud:'http://localhost:8002',jti:'tok-2b'};
+const H={key:'hero',color:'var(--red)',lanes:['Alice (CLI)','Orchestrator','Keycard STS','Triage agent','GitHub API'],
+steps:[[0,2,'PKCE sign-in','Alice signs in through the zone\'s IdP (OAuth 2.1 + PKCE, public client). Policy: is she in oncall-engineers?',['Token #1','issued to Alice for the orchestrator',base,[]]],
+[0,1,'SendMessage + #1','A2A 1.0 JSON-RPC with Bearer #1. The orchestrator checks signature, iss and aud = its own URL.',['Token #1','presented to the orchestrator',base,[]]],
+[1,2,'exchange subject=#1','RFC 8693 token exchange: subject_token = #1, resource = triage agent. The orchestrator authenticates as itself.',['Request','sent to STS',{grant_type:'token-exchange',subject_token:'#1',resource:'http://localhost:8002',client:'incident-orchestrator'},[]]],
+[2,2,'policy: user + app','Cedar runs for Alice and for the orchestrator app (context.on_behalf = true). Any forbid wins; else a permit must match.',['Decision','Cedar evaluation',{principal:'Application::incident-orchestrator',subject:'User::alice-4f2k',resource:'http://localhost:8002',on_behalf:true,result:'permit'},[]]],
+[2,1,'token #2','Same person, same session, new audience: only the triage agent will accept it.',['Token #2','issued to the orchestrator, for Alice',t2,['keycard_app_id','client_id','aud','jti']]],
+[1,3,'SendMessage + #2','The orchestrator calls the triage agent. Sending #1 here would fail: wrong audience.',['Token #2','presented to the triage agent',t2,[]]],
+[3,2,'exchange subject=#2','Triage asks for a GitHub credential for Alice (resource = api.github.com).',['Request','sent to STS',{grant_type:'token-exchange',subject_token:'#2',resource:'https://api.github.com',client:'triage-agent'},[]]],
+[2,3,'GitHub credential','Brokered from Alice\'s earlier GitHub connection. Opaque provider token with GitHub\'s own lifetime.',['Credential #3','brokered for Alice',{type:'brokered provider token',provider:'GitHub',for_user:'alice-4f2k',stored_by_agent:false},[]]],
+[3,4,'GET /issues','Triage reads open incident issues as Alice. Answers flow back the same way.',['Credential #3','presented to GitHub',{type:'brokered provider token',provider:'GitHub',for_user:'alice-4f2k'},[]]],
+[2,2,'audit: one session','Console > Audit Log & Sessions shows sid s-7f3e across every hop, with each issuance, policy decision and jti.',['Audit','session s-7f3e',{sid:'s-7f3e',hops:3,credentials_issued:['tok-1a','tok-2b','github'],denials:0},[]]]]};
+let hs=0,timer=null;
+const hDraw=seq(document.getElementById('hero-seq'),H,()=>hs,k=>{hs=k;hUp();});
+function hUp(){
+  const st=H.steps[hs],[tt,sub,obj,chg]=st[4];
+  document.getElementById('t-title').textContent=tt;document.getElementById('t-sub').textContent=sub;
+  document.getElementById('t-body').innerHTML=Object.entries(obj).map(([k,v])=>{const line=`"${esc(k)}": ${esc(JSON.stringify(v))}`;return chg.includes(k)?`<b>${line}</b>`:line;}).join(',\n');
+  document.getElementById('h-note').textContent=(hs+1)+'. '+st[3];
+  document.getElementById('h-count').textContent=`Hop ${hs+1} of ${H.steps.length}`;
+  document.getElementById('h-prev').disabled=hs===0;document.getElementById('h-next').disabled=hs===H.steps.length-1;
+  hDraw();
+}
+document.getElementById('h-prev').onclick=()=>{if(hs>0){hs--;hUp();}};
+document.getElementById('h-next').onclick=()=>{if(hs<H.steps.length-1){hs++;hUp();}};
+document.getElementById('h-play').onclick=e=>{
+  if(timer){clearInterval(timer);timer=null;e.target.textContent='Play';return;}
+  if(hs===H.steps.length-1)hs=0;e.target.textContent='Pause';hUp();
+  timer=setInterval(()=>{if(hs>=H.steps.length-1){clearInterval(timer);timer=null;e.target.textContent='Play';return;}hs++;hUp();},2200);
+};
+hUp();
+
+/* ---------- game ---------- */
+const Q=[
+['The orchestrator skips the exchange and forwards Alice\'s token #1 (aud = orchestrator) straight to the triage agent.',['Accepted, Alice is a valid user','Rejected with 401: wrong audience','Accepted but logged as a warning'],1,'Each agent binds its verifier to its own identity URL. #1 was minted for the orchestrator, so the triage agent refuses it. Exchange the token instead.'],
+['A fresh zone still has the managed default-zone-policies. No custom policies exist. Any signed-in employee calls any resource.',['Allowed','Denied by default','Needs admin approval'],0,'default-user-grants permits every authenticated user to reach every resource. Replace it or add forbids before going live.'],
+['Policy set: permit calendar-admins to call delete_event, plus a forbid on delete_event with no conditions. Bob is in calendar-admins.',['Allowed, the group permit matches','Denied, forbid beats permit','Allowed only through the gateway'],1,'In Cedar a matching forbid overrides every permit, including managed ones.'],
+['The nightly digest (confidential client, consent implicit) impersonates Alice. No policy mentions context.impersonate.',['Allowed','access_denied','insufficient_authorization'],1,'Default policies never permit impersonation. Without a permit on context.impersonate == true the exchange returns access_denied.'],
+['Same digest, impersonation policy now active, but Alice never connected GitHub.',['access_denied','insufficient_authorization','A token with empty scope'],1,'Impersonation needs prior user delegation for the resource. Missing consent is insufficient_authorization, not a policy denial.'],
+['A command-line tool on Alice\'s laptop needs a token for the orchestrator. It cannot keep a secret.',['Client credentials','Authorization code + PKCE','Impersonation'],1,'Public clients (native, CLI, MCP clients) use the authorization code flow with PKCE. Public credentials cannot use client credentials or impersonation.'],
+['An MCP server must call GitHub as whoever is using the tool right now.',['Token exchange (RFC 8693) via @grant','Store each user\'s PAT in a database','Client credentials'],0,'Delegation chaining: the server exchanges the caller\'s token for a GitHub credential. Both app and user are policy-checked.'],
+['A queue worker builds an org-wide report. No user is involved.',['Client credentials (as itself)','Impersonate an admin','PKCE'],0,'Autonomous access: the application authenticates directly. In LangChain: Access.as_self().'],
+['At 10:00 an admin revokes Alice\'s GitHub grant. The triage agent still holds a GitHub token issued at 09:50.',['It stops working immediately','It works until it expires; the next exchange fails','Alice is signed out everywhere'],1,'Revocation stops new issuance and refresh. Already-held credentials live until exp, and brokered ones need revoking at GitHub too.'],
+['Bob is removed from the oncall-engineers group. He has not signed out. He calls the orchestrator again.',['Still allowed until he signs in again','Denied on this request','Denied after 24 hours'],1,'Keycard resolves group membership at evaluation time, so the change applies to the next request without a policy update or new sign-in.'],
+['A sandboxed agent behind the egress proxy requests http://api.github.com (plain HTTP).',['Forwarded with a credential','Denied: cleartext_not_forwarded','Upgraded to HTTPS automatically'],1,'The proxy never forwards cleartext HTTP. The reason is in the audit line and X-Keycard-Deny-Reason.'],
+['In a gateway policy, where does the MCP tool name go?',['In context.tool','In the action: mcp::tools/call::<name>','In resource.scopes'],1,'Per-tool rules use Keycard::Action::"mcp::tools/call::<tool-name>", with the bare upstream tool name.']];
+let g={i:0,ans:[]};
+const $=id=>document.getElementById(id);
+function gUp(){
+  const done=g.i>=Q.length,right=g.ans.filter(a=>a.ok).length;
+  $('g-score').textContent=`${right} / ${g.ans.length}`;
+  $('g-track').innerHTML=Q.map((_,k)=>`<i class="${g.ans[k]?(g.ans[k].ok?'ok':'no'):(k===g.i?'cur':'')}"></i>`).join('');
+  if(done){$('g-num').textContent='Finished';$('g-q').textContent=right>=10?`${right} of ${Q.length}. You can explain Keycard to your team.`:`${right} of ${Q.length}. Revisit the sections for the ones you missed, then restart.`;$('g-opts').innerHTML='';$('g-expl').textContent='';$('g-next').disabled=true;return;}
+  const [q,opts,ans,why]=Q[g.i],a=g.ans[g.i];
+  $('g-num').textContent=`Request ${g.i+1} of ${Q.length}`;$('g-q').textContent=q;
+  $('g-opts').innerHTML=opts.map((o,k)=>`<button type="button" data-k="${k}" class="${a?(k===ans?'ok':(k===a.pick?'no':'')):''}" ${a?'disabled':''}>${esc(o)}</button>`).join('');
+  $('g-expl').innerHTML=a?`<b>${a.ok?'Correct.':'Not this time.'}</b> ${esc(why)}`:'';
+  $('g-next').disabled=!a;
+}
+$('g-opts').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||g.ans[g.i])return;const k=+b.dataset.k;g.ans[g.i]={pick:k,ok:k===Q[g.i][2]};gUp();});
+$('g-next').onclick=()=>{g.i++;gUp();};
+$('g-reset').onclick=()=>{g={i:0,ans:[]};gUp();};
+window.claude?.hot?.snapshot?.(()=>g);
+const start=d=>{if(d&&Array.isArray(d.ans))g=d;gUp();};
+window.claude?.hot?.ready?window.claude.hot.ready(start):start(window.claude?.hot?.data??{});
+
+/* ---------- copy ---------- */
+document.addEventListener('click',async e=>{const b=e.target.closest('.copy');if(!b)return;
+  try{await navigator.clipboard.writeText(document.getElementById(b.dataset.copy).textContent);b.textContent='Copied';}catch(err){b.textContent='Select and copy';}
+  setTimeout(()=>b.textContent='Copy',1600);});
+}
+</script>
+</body>
+</html>

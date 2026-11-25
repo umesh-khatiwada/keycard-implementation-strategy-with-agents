@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# mz - control the LOCAL MOCK zone (and the lab services). Mock only.
+set -euo pipefail
+cd "$(dirname "$0")"
+Z="${MOCKZONE_URL:-http://localhost:9000}"
+PY=.venv/bin/python
+# mz drives the MOCK environment: services it starts never read .env (which may hold real-zone settings)
+export KEYCARD_LAB_NO_DOTENV=1 KEYCARD_ZONE_URL="$Z"
+RUN=.run; mkdir -p "$RUN"
+j() { if command -v jq >/dev/null; then jq .; else $PY -m json.tool; fi; }
+
+SERVICES=(
+  "mockzone:9000:mockzone/server.py"
+  "mcp:8000:labs/03_mcp_server/github_mcp.py"
+  "triage:8002:labs/05_a2a/triage_agent.py"
+  "orchestrator:8001:labs/05_a2a/orchestrator_agent.py"
+  "gateway:8100:labs/10_gateway/mini_gateway.py"
+  "egress:8200:labs/11_sandbox_proxy/egress_proxy.py"
+)
+
+wait_port() { for _ in $(seq 60); do (exec 3<>/dev/tcp/127.0.0.1/$1) 2>/dev/null && return 0; sleep 0.25; done; echo "port $1 did not open" >&2; return 1; }
+
+up() {
+  for s in "${SERVICES[@]}"; do
+    IFS=: read -r name port file <<<"$s"
+    if [ -f "$RUN/$name.pid" ] && kill -0 "$(cat "$RUN/$name.pid")" 2>/dev/null; then echo "  $name already running"; continue; fi
+    if port_busy "$port"; then echo "  port $port is in use by another process; stop it first (e.g. fuser -k $port/tcp)" >&2; return 1; fi
+    $PY "$file" >"$RUN/$name.log" 2>&1 & local pid=$!; echo $pid >"$RUN/$name.pid"
+    wait_port "$port" || { tail -n 20 "$RUN/$name.log" >&2; return 1; }
+    kill -0 $pid 2>/dev/null || { echo "  $name exited; see $RUN/$name.log" >&2; return 1; }
+    echo "  $name  :$port  (log: $RUN/$name.log)"
+  done
+}
+
+port_busy() { (exec 3<>/dev/tcp/127.0.0.1/$1) 2>/dev/null; }
+
+down() {
+  local pids=()
+  for f in "$RUN"/*.pid; do [ -e "$f" ] || continue; pids+=("$(cat "$f")"); kill "$(cat "$f")" 2>/dev/null || true; rm -f "$f"; done
+  # wait until every process has really exited (ports released) so a following 'up' can't race them
+  for p in ${pids[@]+"${pids[@]}"}; do for _ in $(seq 40); do kill -0 "$p" 2>/dev/null || break; sleep 0.25; done; kill -9 "$p" 2>/dev/null || true; done
+  echo "  stopped"
+}
+
+case "${1:-help}" in
+  up)        up ;;
+  down)      down ;;
+  restart)   down; sleep 1; up ;;
+  logs)      tail -n "${3:-40}" "$RUN/${2:-mockzone}.log" ;;
+  reset)     curl -s -XPOST "$Z/mock/reset" | j; rm -rf .tokens ;;
+  state)     curl -s "$Z/mock/state" | j ;;
+  audit)     curl -s "$Z/mock/audit${2:+?sid=$2}" | j ;;
+  policy)    curl -s -XPOST "$Z/mock/policies/$3/$2" | j ;;          # mz policy enable|disable NAME
+  group)     curl -s -XPOST "$Z/mock/groups/$3/$2?user=$4" | j ;;     # mz group add|remove GROUP USER
+  grant)     curl -s -XPOST "$Z/mock/grants?user=$2&resource=$3" | j ;;
+  revoke)    curl -s -XDELETE "$Z/mock/grants?user=$2&resource=$3" | j ;;
+  provider-revoke) curl -s -XPOST "$Z/mock/provider-revoke?user=$2" | j ;;
+  *) cat <<USAGE
+mz up | down | restart            start/stop mock zone + MCP server + agents + gateway + egress proxy
+mz logs [service] [n]             service: mockzone mcp triage orchestrator gateway egress
+mz reset                          fresh state (grants, groups, audit), disable lab policies, drop cached tokens
+mz state                          users/groups/grants/policies/apps/resources
+mz audit [sid]                    audit log, optionally one session
+mz policy enable|disable NAME     e.g. 90_digest-may-impersonate, 91_freeze-issue-creation, 92_default-user-grants
+mz group add|remove GROUP USER    e.g. mz group remove oncall-engineers bob
+mz grant|revoke USER RESOURCE     e.g. mz revoke alice https://api.github.com
+mz provider-revoke USER           simulate revoking at GitHub itself
+USAGE
+esac

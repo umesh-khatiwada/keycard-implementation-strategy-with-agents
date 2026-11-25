@@ -1,0 +1,18 @@
+# Lab 12 - keycard CLI: just-in-time credentials for coding agents and scripts.
+# Put this at your project root. REAL KEYCARD ACCOUNT REQUIRED (no mock).
+#
+#   brew install keycardai/tap/keycard
+#   keycard auth signin --zone <zone-id> --org <org>      (--device on a headless box)
+#   keycard run -- sh -c 'test -n "$GH_TOKEN" && echo "GH_TOKEN is set"'   # exists only in that process; never print it
+#   keycard run claude                                    # Claude Code in an audited session
+#   keycard credential read https://api.github.com
+#   keycard credential sync --mcp                         # add every MCP server in the zone
+#   keycard agent exec -- ./ci-step.sh                    # non-interactive (agents / CI)
+#   keycard plugin install claude
+
+[zone]
+id = "your-zone-id"
+
+[[credentials.default]]
+env_var = "GH_TOKEN"
+resource = "https://api.github.com"

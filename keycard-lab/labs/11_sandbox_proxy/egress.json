@@ -1,0 +1,11 @@
+{
+  "_comment": "Allow list for ONE sandbox (one user). Exact host, one port, longest path prefix. Credentialed endpoints must match a zone Resource.",
+  "sandbox_user": "alice@example.com",
+  "endpoints": [
+    {"host": "api.github.com", "port": 443, "path_prefix": "/repos/acme/", "resource": "https://api.github.com",
+     "inject": {"header": "Authorization", "template": "Bearer {token}"}},
+    {"host": "api.github.com", "port": 443, "path_prefix": "/user", "resource": "https://api.github.com",
+     "inject": {"header": "Authorization", "template": "Bearer {token}"}},
+    {"host": "pypi.org", "port": 443, "path_prefix": "/simple/", "resource": null}
+  ]
+}

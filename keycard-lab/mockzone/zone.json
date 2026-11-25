@@ -1,0 +1,37 @@
+{
+  "_comment": "Directory of the LOCAL MOCK zone. Mirrors what you would create in the Keycard Console: users (from your IdP), groups, applications (one per agent), resources (one per agent / MCP server / API). Edit and restart the mock zone to change it. Runtime state (grants, group changes, audit log) lives in mockzone/.state/ and is reset with ./mz reset.",
+
+  "users": {
+    "alice": {"email": "alice@example.com", "groups": ["oncall-engineers", "incident-commanders"]},
+    "bob":   {"email": "bob@example.com",   "groups": ["oncall-engineers"]},
+    "carol": {"email": "carol@example.com", "groups": []}
+  },
+
+  "applications": {
+    "oncall-cli":            {"name": "On-call CLI (public PKCE client)", "credential_type": "public", "consent": "explicit",
+                              "redirect_uris": ["http://localhost:8765/callback"]},
+    "github-mcp":            {"name": "Incident GitHub MCP server", "credential_type": "password", "secret": "github-mcp-secret", "consent": "explicit", "resource": "http://localhost:8000/mcp", "traits": ["mcp-provider"]},
+    "incident-orchestrator": {"name": "Incident orchestrator agent", "credential_type": "password", "secret": "orchestrator-secret", "consent": "explicit", "resource": "http://localhost:8001"},
+    "triage-agent":          {"name": "Triage agent", "credential_type": "password", "secret": "triage-secret", "consent": "explicit", "resource": "http://localhost:8002"},
+    "nightly-digest":        {"name": "Nightly digest job", "credential_type": "password", "secret": "digest-secret", "consent": "implicit"},
+    "oncall-langchain":      {"name": "On-call LangChain agent", "credential_type": "password", "secret": "langchain-secret", "consent": "explicit", "resource": "http://localhost:8300"},
+    "mcp-gateway":           {"name": "Mini MCP gateway", "credential_type": "password", "secret": "gateway-secret", "consent": "implicit", "resource": "http://localhost:8100/mcp", "traits": ["gateway"]},
+    "egress-proxy":          {"name": "Sandbox egress proxy", "credential_type": "password", "secret": "egress-secret", "consent": "implicit"},
+    "workload-agent":        {"name": "Agent using workload identity (no secret)", "credential_type": "token", "consent": "explicit",
+                              "workload_identity": {"issuer": "{ZONE}/mock/platform", "subject": "system:serviceaccount:agents:workload-agent"}}
+  },
+
+  "resources": {
+    "http://localhost:8000/mcp":  {"name": "Incident GitHub MCP server", "scopes": ["mcp:tools"]},
+    "http://localhost:8001":      {"name": "Incident orchestrator agent", "scopes": ["agent:invoke"]},
+    "http://localhost:8002":      {"name": "Triage agent", "scopes": ["agent:invoke"]},
+    "http://localhost:8100/mcp":  {"name": "Mini MCP gateway", "scopes": ["mcp:tools"]},
+    "http://localhost:8300":      {"name": "On-call LangChain agent", "scopes": ["agent:invoke"]},
+    "https://api.github.com":     {"name": "GitHub API", "scopes": ["repo"], "brokered": "github"},
+    "https://reports.internal.example": {"name": "Internal reports API", "scopes": ["reports:write"], "token_ttl": 120}
+  },
+
+  "seed_grants": [
+    {"user": "alice", "resource": "https://api.github.com"}
+  ]
+}
